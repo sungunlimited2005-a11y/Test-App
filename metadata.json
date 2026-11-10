@@ -1,0 +1,6 @@
+{
+  "name": "VYRA",
+  "description": "A modern, premium social networking platform to connect, share photos and reels, view stories, message friends, and explore creators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

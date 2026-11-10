@@ -1,0 +1,397 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.:]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isUserAdmin() {
+      return isSignedIn() && (
+        (request.auth.uid in ['admin', 'vyra_admin']) ||
+        (exists(/databases/$(database)/documents/usernames/owneranant) &&
+         get(/databases/$(database)/documents/usernames/owneranant).data.userId == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == 'owneranant') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() > 0 &&
+             data.username is string && data.username.size() >= 2 && data.username.size() <= 30 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 50 &&
+             data.email is string && data.email.size() <= 120 &&
+             (!('bio' in data) || data.bio == null || (data.bio is string && data.bio.size() <= 300)) &&
+             (!('websiteUrl' in data) || data.websiteUrl == null || (data.websiteUrl is string && data.websiteUrl.size() <= 200)) &&
+             (!('avatarUrl' in data) || data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 2000)) &&
+             (!('isPrivate' in data) || data.isPrivate is bool) &&
+             (!('themePreference' in data) || data.themePreference is string) &&
+             (!('postsCount' in data) || data.postsCount is int) &&
+             (!('followersCount' in data) || data.followersCount is int) &&
+             (!('followingCount' in data) || data.followingCount is int) &&
+             (!('badges' in data) || data.badges is list) &&
+             (!('isAdmin' in data) || data.isAdmin is bool) &&
+             (!('showOnlineStatus' in data) || data.showOnlineStatus is bool) &&
+             (!('hideLikeCounts' in data) || data.hideLikeCounts is bool) &&
+             (!('mutedUserIds' in data) || data.mutedUserIds is list) &&
+             (!('restrictedUserIds' in data) || data.restrictedUserIds is list) &&
+             (!('profileTheme' in data) || data.profileTheme is string) &&
+             (!('bannerStyle' in data) || data.bannerStyle is string) &&
+             (!('cardBorderStyle' in data) || data.cardBorderStyle is string) &&
+             (!('pinnedPostIds' in data) || data.pinnedPostIds is list) &&
+             (!('sectionOrder' in data) || data.sectionOrder is list) &&
+             (!('bioLinks' in data) || data.bioLinks is list) &&
+             (!('profileVisitsCount' in data) || data.profileVisitsCount is int) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidPost(data) {
+      return data.userId is string && data.userId.size() > 0 &&
+             data.username is string && data.username.size() > 0 &&
+             data.mediaUrl is string && data.mediaUrl.size() > 0 && data.mediaUrl.size() <= 2000 &&
+             (!('mediaType' in data) || data.mediaType in ['image', 'video']) &&
+             (!('contentType' in data) || data.contentType in ['POST', 'REEL']) &&
+             (!('isReel' in data) || data.isReel is bool) &&
+             (!('caption' in data) || (data.caption is string && data.caption.size() <= 2200)) &&
+             (!('hashtags' in data) || (data.hashtags is list && data.hashtags.size() <= 30)) &&
+             (!('likesCount' in data) || data.likesCount is int) &&
+             (!('commentsCount' in data) || data.commentsCount is int) &&
+             (!('viewsCount' in data) || data.viewsCount is int) &&
+             (!('isPrivate' in data) || data.isPrivate is bool) &&
+             (!('allowComments' in data) || data.allowComments is bool) &&
+             (!('isPinned' in data) || data.isPinned is bool) &&
+             (!('musicTitle' in data) || (data.musicTitle is string && data.musicTitle.size() <= 120)) &&
+             (!('musicArtist' in data) || (data.musicArtist is string && data.musicArtist.size() <= 120)) &&
+             (!('musicUrl' in data) || (data.musicUrl is string && data.musicUrl.size() <= 2000)) &&
+             (!('spotifyUrl' in data) || (data.spotifyUrl is string && data.spotifyUrl.size() <= 2000)) &&
+             (!('originalAudioVolume' in data) || data.originalAudioVolume is number) &&
+             (!('musicVolume' in data) || data.musicVolume is number) &&
+             (!('isOriginalAudioMuted' in data) || data.isOriginalAudioMuted is bool) &&
+             (!('isMusicMuted' in data) || data.isMusicMuted is bool) &&
+             (!('authorBadges' in data) || data.authorBadges is list) &&
+             (!('collaboratorUserId' in data) || data.collaboratorUserId is string) &&
+             (!('collaboratorUsername' in data) || data.collaboratorUsername is string) &&
+             (!('collaboratorStatus' in data) || data.collaboratorStatus in ['none', 'pending', 'accepted', 'rejected']) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidPostLike(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.postId is string && data.postId.size() > 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidPostComment(data) {
+      return data.postId is string && data.postId.size() > 0 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.username is string && data.username.size() > 0 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 500 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidStory(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.username is string && data.username.size() > 0 &&
+             data.mediaUrl is string && data.mediaUrl.size() > 0 && data.mediaUrl.size() <= 1000 &&
+             (!('mediaType' in data) || data.mediaType in ['image', 'video']) &&
+             (!('caption' in data) || (data.caption is string && data.caption.size() <= 300)) &&
+             (!('isCloseFriendsOnly' in data) || data.isCloseFriendsOnly is bool) &&
+             (!('viewersCount' in data) || data.viewersCount is int) &&
+             (!('questionPrompt' in data) || data.questionPrompt is string) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.expiresAt is timestamp;
+    }
+
+    function isValidConversation(data) {
+      return data.type in ['direct', 'group'] &&
+             data.memberIds is list && data.memberIds.size() >= 2 && data.memberIds.size() <= 50 &&
+             (!('name' in data) || data.name == null || (data.name is string && data.name.size() <= 100)) &&
+             (!('avatarUrl' in data) || data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 2000)) &&
+             (!('adminIds' in data) || data.adminIds is list) &&
+             (!('lastMessageText' in data) || (data.lastMessageText is string && data.lastMessageText.size() <= 1000)) &&
+             (!('lastMessageSenderId' in data) || data.lastMessageSenderId is string) &&
+             (!('lastMessageTimestamp' in data) || data.lastMessageTimestamp == null || data.lastMessageTimestamp is timestamp) &&
+             (!('theme' in data) || data.theme is string) &&
+             (!('wallpaperUrl' in data) || data.wallpaperUrl is string) &&
+             (!('unreadCounts' in data) || data.unreadCounts is map) &&
+             (!('mutedUserIds' in data) || data.mutedUserIds is list) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    function isValidChatMessage(data) {
+      return data.conversationId is string && data.conversationId.size() > 0 &&
+             data.senderId is string && data.senderId == request.auth.uid &&
+             data.senderUsername is string && data.senderUsername.size() > 0 &&
+             (!('senderAvatarUrl' in data) || data.senderAvatarUrl is string) &&
+             (!('senderBadges' in data) || data.senderBadges is list) &&
+             (!('memberIds' in data) || data.memberIds is list) &&
+             data.text is string && data.text.size() <= 1000 &&
+             (!('mediaUrl' in data) || data.mediaUrl == null || (data.mediaUrl is string && data.mediaUrl.size() <= 2000)) &&
+             (!('mediaType' in data) || data.mediaType in ['text', 'image', 'video', 'voice', 'poll', 'post']) &&
+             (!('sharedPostId' in data) || data.sharedPostId == null || (data.sharedPostId is string && data.sharedPostId.size() <= 128)) &&
+             (!('voiceDurationMs' in data) || data.voiceDurationMs is int) &&
+             (!('pollQuestion' in data) || data.pollQuestion is string) &&
+             (!('pollOptions' in data) || data.pollOptions is list) &&
+             (!('pollVotes' in data) || data.pollVotes is map) &&
+             (!('pollExpiresAt' in data) || data.pollExpiresAt == null || data.pollExpiresAt is timestamp) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidNotification(data) {
+      return data.userId is string && data.userId.size() > 0 &&
+             data.actorId is string && data.actorId == request.auth.uid &&
+             data.type in ['like', 'comment', 'follow', 'follow_request', 'message', 'mention', 'collab', 'moment'] &&
+             data.message is string && data.message.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidReport(data) {
+      return data.reporterId is string && data.reporterId == request.auth.uid &&
+             data.targetType in ['user', 'post', 'comment', 'message', 'moment', 'answer'] &&
+             data.targetId is string && data.targetId.size() > 0 &&
+             data.reason is string && data.reason.size() <= 200 &&
+             data.status in ['pending', 'reviewed', 'resolved'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // --- Users & Profiles ---
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId && incoming().userId == userId && isValidUserProfile(incoming());
+      allow update: if isSignedIn() && isValidUserProfile(incoming()) && (
+        isUserAdmin() ||
+        (request.auth.uid == userId && incoming().userId == userId && incoming().createdAt == existing().createdAt &&
+         !incoming().diff(existing()).affectedKeys().hasAny(['isAdmin', 'badges'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followingCount', 'postsCount', 'profileVisitsCount', 'updatedAt']))
+      );
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+
+      // Drafts
+      match /drafts/{draftId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Saved content
+      match /saved/{savedId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Followers
+      match /followers/{followerUserId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isSignedIn() && (request.auth.uid == followerUserId || request.auth.uid == userId);
+      }
+
+      // Following
+      match /following/{followingUserId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == followingUserId);
+      }
+
+      // Follow Requests
+      match /follow_requests/{requesterUserId} {
+        allow read: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == requesterUserId);
+        allow create: if isSignedIn() && request.auth.uid == requesterUserId;
+        allow update, delete: if isSignedIn() && (request.auth.uid == userId || request.auth.uid == requesterUserId);
+      }
+
+      // Close Friends
+      match /close_friends/{friendUserId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Blocked Users
+      match /blocked_users/{blockedUserId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // User Notifications
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && incoming().userId == userId && isValidNotification(incoming());
+      }
+    }
+
+    // --- Username Reservation Registry ---
+    match /usernames/{username} {
+      allow get: if true;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().username == username && isValidId(username);
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // --- Posts & Reels ---
+    match /posts/{postId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidPost(incoming());
+      allow update: if isSignedIn() && isValidPost(incoming()) && (
+        (incoming().userId == request.auth.uid && incoming().createdAt == existing().createdAt) ||
+        (existing().collaboratorUserId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['collaboratorStatus', 'updatedAt'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'viewsCount', 'updatedAt']))
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+
+      match /likes/{userId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidPostLike(incoming());
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidPostComment(incoming());
+        allow delete: if isSignedIn() && (
+          existing().userId == request.auth.uid ||
+          get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid
+        );
+      }
+    }
+
+    // --- Stories ---
+    match /stories/{storyId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidStory(incoming());
+      allow update: if isSignedIn() && (
+        (incoming().userId == request.auth.uid && isValidStory(incoming())) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['viewersCount']))
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+
+      match /viewers/{viewerUserId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.auth.uid == viewerUserId;
+      }
+    }
+
+    // --- Conversations & Messages ---
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.memberIds);
+      allow create: if isSignedIn() && (request.auth.uid in incoming().memberIds) && isValidConversation(incoming());
+      allow update: if isSignedIn() && (request.auth.uid in existing().memberIds) && isValidConversation(incoming());
+      allow delete: if isSignedIn() && (request.auth.uid in existing().memberIds);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (
+          ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) ||
+          (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberIds)
+        );
+        allow create: if isSignedIn() && incoming().senderId == request.auth.uid && (
+          ('memberIds' in incoming() && request.auth.uid in incoming().memberIds) ||
+          (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberIds)
+        ) && isValidChatMessage(incoming());
+        allow update: if isSignedIn() && (
+          ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) ||
+          (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberIds)
+        ) && incoming().diff(existing()).affectedKeys().hasOnly(['pollVotes']);
+        allow delete: if isSignedIn() && existing().senderId == request.auth.uid;
+      }
+    }
+
+    // --- Moments ---
+    match /moments/{momentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (incoming().userId == request.auth.uid) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'repliesCount', 'likedUserIds']))
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+
+      match /replies/{replyId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+        allow delete: if isSignedIn() && (
+          existing().userId == request.auth.uid ||
+          get(/databases/$(database)/documents/moments/$(momentId)).data.userId == request.auth.uid
+        );
+      }
+    }
+
+    // --- Playlists (VYRA Sound) ---
+    match /playlists/{playlistId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // --- Question Stickers & Answers (Ask Me) ---
+    match /question_stickers/{stickerId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+
+      match /answers/{answerId} {
+        allow read: if isSignedIn() && (
+          resource.data.authorId == request.auth.uid ||
+          resource.data.isPublic == true ||
+          (exists(/databases/$(database)/documents/question_stickers/$(stickerId)) &&
+           get(/databases/$(database)/documents/question_stickers/$(stickerId)).data.userId == request.auth.uid)
+        );
+        allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
+        allow update: if isSignedIn() && (
+          exists(/databases/$(database)/documents/question_stickers/$(stickerId)) &&
+          get(/databases/$(database)/documents/question_stickers/$(stickerId)).data.userId == request.auth.uid
+        ) && incoming().diff(existing()).affectedKeys().hasOnly(['isPublic']);
+        allow delete: if isSignedIn() && (
+          existing().authorId == request.auth.uid ||
+          (exists(/databases/$(database)/documents/question_stickers/$(stickerId)) &&
+           get(/databases/$(database)/documents/question_stickers/$(stickerId)).data.userId == request.auth.uid)
+        );
+      }
+    }
+
+    // --- Watch Sessions ---
+    match /watch_sessions/{sessionId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().hostId == request.auth.uid;
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && existing().hostId == request.auth.uid;
+    }
+
+    // --- Reports ---
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && incoming().reporterId == request.auth.uid && isValidReport(incoming());
+      allow read: if isSignedIn() && resource.data.reporterId == request.auth.uid;
+    }
+
+    // --- Verification Requests ---
+    match /verification_requests/{requestId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isUserAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().status == 'pending';
+      allow update: if isSignedIn() && (isUserAdmin() || (resource.data.userId == request.auth.uid && incoming().status == 'pending'));
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isUserAdmin());
+    }
+
+    // --- Story Highlights ---
+    match /highlights/{highlightId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public and account profile information for a VYRA user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "bio": { "type": "string" },
+        "websiteUrl": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "isPrivate": { "type": "boolean" },
+        "themePreference": { "type": "string" },
+        "postsCount": { "type": "integer" },
+        "followersCount": { "type": "integer" },
+        "followingCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "username", "displayName", "email", "createdAt"]
+    },
+    "UsernameReservation": {
+      "title": "UsernameReservation",
+      "description": "Ensures unique username claims and account lookup across the platform.",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "userId": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "userId", "email", "createdAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Feed post or vertical reel published by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "userAvatarUrl": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "isReel": { "type": "boolean" },
+        "caption": { "type": "string" },
+        "hashtags": { "type": "array" },
+        "likesCount": { "type": "integer" },
+        "commentsCount": { "type": "integer" },
+        "viewsCount": { "type": "integer" },
+        "isPrivate": { "type": "boolean" },
+        "allowComments": { "type": "boolean" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "username", "mediaUrl", "createdAt"]
+    },
+    "PostLike": {
+      "title": "PostLike",
+      "description": "Like reaction on a post.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "postId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "postId", "createdAt"]
+    },
+    "PostComment": {
+      "title": "PostComment",
+      "description": "Comment left on a post.",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "userAvatarUrl": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "userId", "username", "text", "createdAt"]
+    },
+    "Story": {
+      "title": "Story",
+      "description": "Ephemeral 24-hour media story.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "userAvatarUrl": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "caption": { "type": "string" },
+        "isCloseFriendsOnly": { "type": "boolean" },
+        "viewersCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "username", "mediaUrl", "createdAt", "expiresAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct or group chat conversation.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "name": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "memberIds": { "type": "array" },
+        "adminIds": { "type": "array" },
+        "lastMessageText": { "type": "string" },
+        "lastMessageSenderId": { "type": "string" },
+        "lastMessageTimestamp": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "memberIds", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message within a conversation.",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderUsername": { "type": "string" },
+        "senderAvatarUrl": { "type": "string" },
+        "text": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "sharedPostId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "senderId", "senderUsername", "text", "createdAt"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "User notification for likes, comments, follows, and messages.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "actorId": { "type": "string" },
+        "actorUsername": { "type": "string" },
+        "actorAvatarUrl": { "type": "string" },
+        "type": { "type": "string" },
+        "targetId": { "type": "string" },
+        "message": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "actorId", "actorUsername", "type", "message", "createdAt"]
+    },
+    "ReportItem": {
+      "title": "ReportItem",
+      "description": "Safety report for inappropriate content or users.",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "targetType", "targetId", "reason", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account documents and profile information."
+    },
+    "/usernames/{username}": {
+      "schema": "UsernameReservation",
+      "description": "Unique username registry to prevent duplicates."
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Feed posts and reels published by users."
+    },
+    "/posts/{postId}/likes/{userId}": {
+      "schema": "PostLike",
+      "description": "Likes associated with a specific post."
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": "PostComment",
+      "description": "Comments left on a post."
+    },
+    "/stories/{storyId}": {
+      "schema": "Story",
+      "description": "24-hour ephemeral stories."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Direct and group messaging conversations."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Individual messages in a chat conversation."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "NotificationItem",
+      "description": "Notifications delivered to a user."
+    },
+    "/users/{userId}/saved/{savedId}": {
+      "schema": "Post",
+      "description": "Saved posts and reels private to a user."
+    },
+    "/users/{userId}/followers/{followerUserId}": {
+      "schema": "UserProfile",
+      "description": "Followers of a user."
+    },
+    "/users/{userId}/following/{followingUserId}": {
+      "schema": "UserProfile",
+      "description": "Users followed by this user."
+    },
+    "/users/{userId}/follow_requests/{requesterUserId}": {
+      "schema": "UserProfile",
+      "description": "Pending follow requests for private profiles."
+    },
+    "/users/{userId}/close_friends/{friendUserId}": {
+      "schema": "UserProfile",
+      "description": "Close friends list for private stories."
+    },
+    "/users/{userId}/blocked_users/{blockedUserId}": {
+      "schema": "UserProfile",
+      "description": "List of blocked accounts."
+    },
+    "/reports/{reportId}": {
+      "schema": "ReportItem",
+      "description": "Safety moderation reports."
+    }
+  }
+}
